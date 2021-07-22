@@ -43,8 +43,7 @@ pub fn match_rule_invocation(
     {
         println!("");
         println!(
-            "=== parse rule invocation `{}` ===",
-            fileserver.get_excerpt(&subparser.get_full_span()));
+            "=== parse rule invocation `{}` ===", &subparser.get_full_span().read(fileserver));
     }
 
     let mut candidates = match_active_rulesets(asm_state, &subparser, fileserver, report.clone())?;
@@ -69,8 +68,7 @@ pub fn match_rule_invocation(
                 let rule = &rule_group.rules[candidate.rule_ref.index];
 
                 println!(
-                    "  `{}`",
-                    fileserver.get_excerpt(&rule.span));
+                    "  `{}`", &rule.span.read(fileserver));
             }
         }
 
@@ -246,11 +244,9 @@ pub fn match_rule<'a>(
     {
         println!("");
         println!(
-            "> try match rule `{}`",
-            fileserver.get_excerpt(&rule.span));
+            "> try match rule `{}`", &rule.span.read(fileserver));
         println!(
-            "  parser at `{}`",
-            fileserver.get_excerpt(&subparser.get_next_spans(100)));
+            "  parser at `{}`", &subparser.get_next_spans(100).read(fileserver));
     }
 
     for (index, part) in rule.pattern.iter().enumerate()
@@ -285,8 +281,7 @@ pub fn match_rule<'a>(
                         if DEBUG
                         {
                             println!("  branch {}, exact matched! parser at `{}`",
-                                branch_index,
-                                fileserver.get_excerpt(&branch.parser.get_next_spans(100)));
+                                branch_index, &branch.parser.get_next_spans(100).read(fileserver));
                         }
                     }
                 }
@@ -345,7 +340,7 @@ pub fn match_rule<'a>(
                                         "  branch {}, parser {}at `{}`",
                                         branch_index,
                                         if expr_using_slice { "using slice " } else { "" },
-                                        fileserver.get_excerpt(&expr_parser.get_next_spans(100)));
+                                        &expr_parser.get_next_spans(100).read(fileserver));
                                 }
 
                                 let expr = expr::Expr::parse(&mut expr_parser)?;
@@ -367,8 +362,7 @@ pub fn match_rule<'a>(
                                     if DEBUG
                                     {
                                         println!("  branch {}, expr matched! parser at `{}`",
-                                            branch_index,
-                                            fileserver.get_excerpt(&branch.parser.get_next_spans(100)));
+                                            branch_index, &branch.parser.get_next_spans(100).read(fileserver));
                                     }
                                 }
                             }
@@ -445,7 +439,7 @@ pub fn match_rule<'a>(
             println!("= branch {}{}, candidate parser at `{}`",
                 branch_index,
                 if branch.dead { " (dead)" } else { "" },
-                fileserver.get_excerpt(&branch.parser.get_next_spans(100)));
+                     &branch.parser.get_next_spans(100).read(fileserver));
         }
 
         if branch.dead

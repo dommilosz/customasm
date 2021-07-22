@@ -10,6 +10,13 @@ pub struct Token
 	pub excerpt: Option<String>
 }
 
+impl Token{
+	pub fn set_content(&mut self, content:String){
+		self.excerpt = Option::from(content.clone());
+		self.span = Span::new_from_string(content.clone());
+	}
+}
+
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub enum TokenKind
@@ -60,7 +67,8 @@ pub enum TokenKind
 	GreaterThan,
 	GreaterThanGreaterThan,
 	GreaterThanGreaterThanGreaterThan,
-	GreaterThanEqual
+	GreaterThanEqual,
+	ASMAddress
 }
 
 
@@ -108,7 +116,8 @@ impl TokenKind
 		self == TokenKind::Tilde ||
 		self == TokenKind::At ||
 		self == TokenKind::LessThan ||
-		self == TokenKind::GreaterThan
+		self == TokenKind::GreaterThan ||
+		self == TokenKind::ASMAddress
 	}
 	
 	
@@ -170,7 +179,8 @@ impl TokenKind
 			TokenKind::GreaterThan => "`>`",
 			TokenKind::GreaterThanGreaterThan => "`>>`",
 			TokenKind::GreaterThanGreaterThanGreaterThan => "`>>>`",
-			TokenKind::GreaterThanEqual => "`>=`"
+			TokenKind::GreaterThanEqual => "`>=`",
+			TokenKind::ASMAddress => "`$$$`"
 		}
 	}
 	
@@ -231,6 +241,7 @@ impl Token
 			TokenKind::GreaterThanGreaterThan => ">>",
 			TokenKind::GreaterThanGreaterThanGreaterThan => ">>>",
 			TokenKind::GreaterThanEqual => ">=",
+			TokenKind::ASMAddress => "$$$",
 			_ => self.excerpt.as_ref().unwrap()
 		}
 	}
@@ -410,7 +421,7 @@ fn check_for_string(src: &[char]) -> Option<(TokenKind, usize)>
 
 fn check_for_fixed(src: &[char]) -> Option<(TokenKind, usize)>
 {
-	static POSSIBLE_TOKENS: [(&str, TokenKind); 41] =
+	static POSSIBLE_TOKENS: [(&str, TokenKind); 42] =
 	[
 		("\n",  TokenKind::LineBreak),
 		("asm", TokenKind::KeywordAsm),
@@ -452,7 +463,8 @@ fn check_for_fixed(src: &[char]) -> Option<(TokenKind, usize)>
 		(">=",  TokenKind::GreaterThanEqual),
 		(">>>", TokenKind::GreaterThanGreaterThanGreaterThan),
 		(">>",  TokenKind::GreaterThanGreaterThan),
-		(">",   TokenKind::GreaterThan)
+		(">",   TokenKind::GreaterThan),
+		("$$$",   TokenKind::ASMAddress)
 	];
 	
 	let maybe_match = POSSIBLE_TOKENS.iter().find(|op|

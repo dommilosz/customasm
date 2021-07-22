@@ -1,11 +1,13 @@
 use std::rc::Rc;
+use crate::util;
 
 
 #[derive(Debug, Clone, Hash, Eq)]
 pub struct Span
 {
 	pub file: Rc<String>,
-	pub location: Option<(usize, usize)>
+	pub location: Option<(usize, usize)>,
+	pub contents: Option<String>
 }
 
 
@@ -16,7 +18,35 @@ impl Span
 		Span
 		{
 			file: filename,
-			location: Some((start, end))
+			location: Some((start, end)),
+			contents: None
+		}
+	}
+
+	pub fn new_noread(filename: Rc<String>, start: usize, end: usize) -> Span
+	{
+		Span
+		{
+			file: filename,
+			location: Some((start, end)),
+			contents: None
+		}
+	}
+
+	pub fn new_loc(filename: Rc<String>, location:Option<(usize, usize)>) -> Span
+	{
+		Span
+		{
+			file: filename,
+			location,
+			contents: None
+		}
+	}
+
+	pub fn read(&self, fileserver: &dyn util::FileServer) -> String {
+		match self.contents.clone() {
+			Some(contents)=>contents,
+			None => fileserver.read_span(self)
 		}
 	}
 	
@@ -26,7 +56,18 @@ impl Span
 		Span
 		{
 			file: Rc::new("".to_string()),
-			location: None
+			location: None,
+			contents: None
+		}
+	}
+
+	pub fn new_from_string(str:String) -> Span
+	{
+		Span
+		{
+			file: Rc::new("".to_string()),
+			location: None,
+			contents: Option::from(str)
 		}
 	}
 	
@@ -39,12 +80,7 @@ impl Span
 		else
 		{
 			let start = self.location.unwrap().0;
-			
-			Span
-			{
-				file: self.file.clone(),
-				location: Some((start, start))
-			}
+			Span::new(self.file.clone(),start,start)
 		}
 	}
 	
@@ -57,12 +93,7 @@ impl Span
 		else
 		{
 			let end = self.location.unwrap().1;
-			
-			Span
-			{
-				file: self.file.clone(),
-				location: Some((end, end))
-			}
+			Span::new(self.file.clone(),end,end)
 		}
 	}
 	
@@ -84,12 +115,8 @@ impl Span
 			let end   = max(self.location.unwrap().1, other.location.unwrap().1);
 			Some((start, end))
 		};
-		
-		Span
-		{
-			file: self.file.clone(),
-			location: location
-		}
+
+		Span::new_loc(self.file.clone(),location)
 	}
 }
 

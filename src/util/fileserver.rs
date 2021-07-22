@@ -25,7 +25,7 @@ pub trait FileServer
 	fn write_bytes(&mut self, report: RcReport, filename: &str, data: &Vec<u8>, span: Option<&Span>) -> Result<(), ()>;
 	
 	
-	fn get_excerpt(&self, span: &Span) -> String
+	fn read_span(&self, span: &Span) -> String
 	{
 		if let Ok(chars) = self.get_chars(RcReport::new(), &*span.file, None)
 		{

@@ -4,7 +4,7 @@ use num_bigint;
 #[derive(Clone, Debug, Eq)]
 pub struct BigInt
 {
-    bigint: num_bigint::BigInt,
+    pub bigint: num_bigint::BigInt,
     pub size: Option<usize>,
 }
 
@@ -12,7 +12,7 @@ pub struct BigInt
 impl BigInt
 {
     pub fn new<T>(bigint: T, size: Option<usize>) -> BigInt
-    where T: Into<num_bigint::BigInt>
+        where T: Into<num_bigint::BigInt>
     {
         BigInt
         {
@@ -27,6 +27,9 @@ impl BigInt
         String::from_utf8_lossy(&self.bigint.to_signed_bytes_be()).to_string()
     }
 
+    pub fn to_hex_str(&self) -> String{
+        format!("{:#X}", self.bigint)
+    }
 
     pub fn from_bytes_be(bytes: &[u8]) -> BigInt
     {
@@ -38,15 +41,23 @@ impl BigInt
         }
     }
 
+    pub fn from_bigint(num_bigint: num_bigint::BigInt) -> BigInt
+    {
+        let bigint = num_bigint.clone();
+        BigInt
+        {
+            bigint,
+            size: Some(num_bigint.bits()),
+        }
+    }
+
 
     pub fn set_bit(&self, index: usize, value: bool) -> BigInt
     {
         if value
         {
             self | &Into::<BigInt>::into(1).shl(index)
-        }
-        else
-        {
+        } else {
             self & &!&Into::<BigInt>::into(0).shl(index)
         }
     }
@@ -55,20 +66,20 @@ impl BigInt
     pub fn get_bit(&self, index: usize) -> bool
     {
         let bytes = self.bigint.to_signed_bytes_le();
-        
+
         let byte_index = index / 8;
         if byte_index >= bytes.len()
-            { return self.bigint.sign() == num_bigint::Sign::Minus; }
-            
+        { return self.bigint.sign() == num_bigint::Sign::Minus; }
+
         let mut byte = bytes[byte_index];
-        
+
         let mut bit_index = index % 8;
         while bit_index > 0
         {
             byte >>= 1;
             bit_index -= 1;
         }
-        
+
         (byte & 0b1) != 0
     }
 
@@ -78,15 +89,13 @@ impl BigInt
         use num_traits::Zero;
 
         if self.bigint.is_zero()
-            { return 1; }
-    
+        { return 1; }
+
         if self.bigint < num_bigint::BigInt::zero()
         {
             let y: num_bigint::BigInt = &self.bigint + 1;
             y.bits() + 1
-        }
-        else
-            { self.bigint.bits() }
+        } else { self.bigint.bits() }
     }
 
 
@@ -95,9 +104,7 @@ impl BigInt
         if let Some(size) = self.size
         {
             size
-        }
-        else
-        {
+        } else {
             self.min_size()
         }
     }
@@ -138,9 +145,7 @@ impl BigInt
     {
         use num_traits::Zero;
         if rhs.bigint == num_bigint::BigInt::zero()
-            { None }
-        else
-            { Some((&self.bigint % &rhs.bigint).into()) }
+        { None } else { Some((&self.bigint % &rhs.bigint).into()) }
     }
 
 
@@ -156,9 +161,7 @@ impl BigInt
         let result = &self.bigint >> rhs;
 
         if lhs_sign == num_bigint::Sign::Minus && result.sign() == num_bigint::Sign::NoSign
-            { BigInt::from(-1) }
-        else
-            { result.into() }
+        { BigInt::from(-1) } else { result.into() }
     }
 
 
@@ -168,16 +171,16 @@ impl BigInt
 
         rhs.bigint.to_usize().map(|rhs| self.shl(rhs).into())
     }
-    
-    
+
+
     pub fn checked_shr(&self, rhs: &BigInt) -> Option<BigInt>
     {
         use num_traits::ToPrimitive;
 
         rhs.bigint.to_usize().map(|rhs| self.shr(rhs).into())
     }
-    
-    
+
+
     pub fn concat(&self, lhs_slice: (usize, usize), rhs: &BigInt, rhs_slice: (usize, usize)) -> BigInt
     {
         let lhs_size = lhs_slice.0 - lhs_slice.1;
@@ -189,8 +192,8 @@ impl BigInt
         result.size = Some(lhs_size + rhs_size);
         result
     }
-    
-    
+
+
     pub fn slice(&self, left: usize, right: usize) -> BigInt
     {
         use num_traits::Zero;
@@ -198,8 +201,8 @@ impl BigInt
 
         let mut mask = num_bigint::BigInt::zero();
         for _ in 0..(left - right)
-            { mask = (mask << 1) + num_bigint::BigInt::one(); }
-        
+        { mask = (mask << 1) + num_bigint::BigInt::one(); }
+
         let shifted_mask = BigInt::new(mask, None).shl(right);
         let mut result = (self & &shifted_mask).shr(right);
         result.size = Some(left - right);
@@ -221,38 +224,58 @@ impl BigInt
 
 
     fn combine_bits<F>(&self, rhs: &BigInt, f: F) -> BigInt
-    where F: Fn(u8, u8) -> u8
+        where F: Fn(u8, u8) -> u8
     {
         let mut lhs_bytes = self.bigint.to_signed_bytes_le();
         let mut lhs_sign = self.bigint.sign();
         let mut rhs_bytes = rhs.bigint.to_signed_bytes_le();
         let mut rhs_sign = rhs.bigint.sign();
-        
+
         if lhs_sign != num_bigint::Sign::Minus
-            { lhs_bytes.push(0); }
-        
+        { lhs_bytes.push(0); }
+
         if rhs_sign != num_bigint::Sign::Minus
-            { rhs_bytes.push(0); }
-            
+        { rhs_bytes.push(0); }
+
         if rhs_bytes.len() > lhs_bytes.len()
         {
             std::mem::swap(&mut lhs_bytes, &mut rhs_bytes);
             std::mem::swap(&mut lhs_sign, &mut rhs_sign);
         }
-        
+
         for i in 0..lhs_bytes.len()
         {
             let rhs_byte = if i < rhs_bytes.len()
-                { rhs_bytes[i] }
-            else if rhs_sign == num_bigint::Sign::Minus
-                { 0xff }
-            else
-                { 0 };
-            
+            { rhs_bytes[i] } else if rhs_sign == num_bigint::Sign::Minus
+            { 0xff } else { 0 };
+
             lhs_bytes[i] = f(lhs_bytes[i], rhs_byte);
         }
-        
+
         num_bigint::BigInt::from_signed_bytes_le(&lhs_bytes).into()
+    }
+
+    pub fn align_size(&mut self, wordsize: usize) {
+        match self.size {
+            Some(size) => {
+                if size < 1 {
+                    self.set_size(wordsize);
+                }
+                if size % wordsize != 0 {
+                    let proper_size = (((size) / wordsize) + 1) * wordsize;
+                    self.set_size(proper_size);
+                }
+            }
+            None => {}
+        }
+    }
+
+    pub fn fix_size(&mut self) {
+        self.set_size(self.bigint.bits());
+    }
+
+    pub fn set_size(&mut self,size:usize) {
+        self.size = Option::from(size);
     }
 }
 
@@ -278,13 +301,13 @@ impl std::ops::Not for &BigInt
     fn not(self) -> Self::Output
     {
         let mut x_bytes = self.bigint.to_signed_bytes_le();
-        
+
         if self.bigint.sign() != num_bigint::Sign::Minus
-            { x_bytes.push(0); }
-        
+        { x_bytes.push(0); }
+
         for i in 0..x_bytes.len()
-            { x_bytes[i] = !x_bytes[i]; }
-        
+        { x_bytes[i] = !x_bytes[i]; }
+
         num_bigint::BigInt::from_signed_bytes_le(&x_bytes).into()
     }
 }

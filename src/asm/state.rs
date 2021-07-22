@@ -1,4 +1,11 @@
 use crate::*;
+use num_bigint::ToBigInt;
+use crate::util::{BigInt, FileServer};
+use crate::syntax::TokenKind;
+use crate::diagn::Span;
+use crate::expr::Value;
+use std::io::Read;
+use std::ops::Add;
 use std::collections::HashMap;
 
 
@@ -197,7 +204,6 @@ impl Assembler
 		}
 	}
 }
-
 
 impl State
 {
@@ -666,8 +672,7 @@ impl State
 		if DEBUG_CANDIDATE_RESOLUTION
 		{
 			println!(
-				"=== resolve candidates for invocation `{}` ===",
-				fileserver.get_excerpt(&invocation.span));
+				"=== resolve candidates for invocation `{}` ===", &invocation.span.read(fileserver));
 		}
 
 		if final_pass && candidates.len() == 1
@@ -699,8 +704,7 @@ impl State
                 let rule = &rule_group.rules[candidate.rule_ref.index];
 
 				println!(
-					"> try candidate `{}`",
-					fileserver.get_excerpt(&rule.span));
+					"> try candidate `{}`", &rule.span.read(fileserver));
 			}
 
 			match self.resolve_rule_invocation_candidate(
@@ -1047,6 +1051,11 @@ impl State
 					return Ok(expr::Value::BuiltInFunction(info.hierarchy[0].clone()));
 				}
 
+				"len" =>
+					{
+						return Ok(expr::Value::Function(info.hierarchy[0].clone()));
+					}
+
 				_ => {}
 			}
 			
@@ -1325,6 +1334,16 @@ impl State
 						}
 					}
 
+					"len" =>
+						{
+							State::eval_fn_check_arg_number(info, 1)?;
+							let bigint = State::eval_fn_get_sized_bigint_arg(info, 0)?;
+							let mut bigint2 = BigInt::from(bigint.size.unwrap());
+							bigint2.fix_size();
+							bigint2.align_size(ctx.cur_wordsize);
+							Ok(expr::Value::make_integer(bigint2))
+						}
+
 					"utf8" |
 					"utf16be" |
 					"utf16le" |
@@ -1378,7 +1397,6 @@ impl State
 		}
 	}
 
-
 	fn eval_asm(
 		&self,
 		ctx: &Context,
@@ -1402,7 +1420,7 @@ impl State
 			let mut subs_parser = parser.slice_until_linebreak_over_nested_braces();
 			let subparser_span = subs_parser.get_full_span();
 
-			//println!("> instr `{}`", fileserver.get_excerpt(&subparser_span));
+			println!("> instr `{}`", &subparser_span.read(fileserver));
 
 			let mut subs_tokens: Vec<syntax::Token> = Vec::new();
 			while !subs_parser.is_over()
@@ -1438,8 +1456,17 @@ impl State
 				}
 			}
 
-			let mut subparser = syntax::Parser::new(Some(info.report.clone()), &subs_tokens);
-			subparser.suppress_reports();
+			for i in 0..subs_tokens.len() {
+				if subs_tokens[i].kind == TokenKind::ASMAddress {
+					println!("FOUND!");
+					subs_tokens[i].kind = TokenKind::Number;
+					let address_u: usize = result.size.unwrap() + ctx.bit_offset;
+					let mut address = BigInt::from_bigint(address_u.to_bigint().unwrap());
+					address.fix_size();
+					address.align_size(ctx.cur_wordsize);
+					subs_tokens[i].set_content(address.to_hex_str());
+				}
+			}
 
 			//println!("> after subs `{:?}`", subs_tokens);
 		
@@ -1509,5 +1536,27 @@ impl State
 
 		//println!("  result size = {:?}", result.size);
 		Ok(expr::Value::make_integer(result))
+	}
+
+	fn eval_asm_tokens(&self, subs_tokens: &Vec<syntax::Token>,ctx: &Context, info: &mut expr::EvalAsmInfo, fileserver: &dyn util::FileServer) -> Result<Value,()>{
+		let mut subparser = syntax::Parser::new(Some(info.report.clone()), &subs_tokens);
+		subparser.suppress_reports();
+
+		println!("> after subs `{:?}`", subs_tokens);
+
+		let mut matches = asm::parser::match_rule_invocation(
+			&self,
+			subparser,
+			ctx.clone(),
+			fileserver,
+			info.report.clone())?;
+
+		let value = self.resolve_rule_invocation(
+			info.report.clone(),
+			&mut matches,
+			fileserver,
+			true,
+			info.args)?;
+		Ok(value)
 	}
 }

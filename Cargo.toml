@@ -33,3 +33,14 @@ sha2 = "0.9.1"
 
 [build-dependencies]
 vergen = "3.1.0"
+
+[profile.dev]
+opt-level = 0
+debug = true
+debug-assertions = true
+overflow-checks = true
+lto = false
+panic = 'unwind'
+incremental = true
+codegen-units = 256
+rpath = false
