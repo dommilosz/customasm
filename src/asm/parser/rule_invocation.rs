@@ -148,7 +148,7 @@ pub fn match_active_rulesets(
 
     for ruleset_ref in &asm_state.active_rulesets
     {
-        if let Ok(subcandidates) = match_ruleset(asm_state, *ruleset_ref, &subparser, true, fileserver, report.clone())
+        if let Ok(subcandidates) = match_ruleset(0, asm_state, *ruleset_ref, &subparser, true, fileserver, report.clone())
         {
             for candidate in subcandidates
             {
@@ -172,6 +172,7 @@ pub fn match_active_rulesets(
 
 
 pub fn match_ruleset<'a>(
+    depth: usize,
     asm_state: &asm::State,
     ruleset_ref: asm::RulesetRef,
     subparser: &syntax::Parser<'a>,
@@ -184,25 +185,28 @@ pub fn match_ruleset<'a>(
 
     let mut candidates = Vec::new();
 
-    for index in 0..rule_group.rules.len()
+    if depth < 5
     {
-        let rule_ref = asm::RuleRef
+        for index in 0..rule_group.rules.len()
         {
-            ruleset_ref,
-            index,
-        };
-
-        if let Ok(subcandidates) = match_rule(asm_state, rule_ref, subparser, fileserver, report.clone())
-        {
-            //println!(
-            //    "finish pattern with parser at `{}`",
-            //    fileserver.get_excerpt(&subparser_clone.get_next_spans(10)));
-        
-            for subcandidate in subcandidates
+            let rule_ref = asm::RuleRef
             {
-                if !must_consume_all_tokens || subcandidate.1.is_over()
+                ruleset_ref,
+                index,
+            };
+
+            if let Ok(subcandidates) = match_rule(depth, asm_state, rule_ref, subparser, fileserver, report.clone())
+            {
+                //println!(
+                //    "finish pattern with parser at `{}`",
+                //    fileserver.get_excerpt(&subparser_clone.get_next_spans(10)));
+            
+                for subcandidate in subcandidates
                 {
-                    candidates.push(subcandidate);
+                    if !must_consume_all_tokens || subcandidate.1.is_over()
+                    {
+                        candidates.push(subcandidate);
+                    }
                 }
             }
         }
@@ -223,6 +227,7 @@ struct ParsingBranch<'a>
 
 
 pub fn match_rule<'a>(
+    depth: usize,
     asm_state: &asm::State,
     rule_ref: asm::RuleRef,
     subparser: &syntax::Parser<'a>,
@@ -384,6 +389,7 @@ pub fn match_rule<'a>(
                             let token_start = branch.parser.get_current_token_index();
 
                             let subcandidates = match_ruleset(
+                                depth + 1,
                                 asm_state,
                                 rule_group_ref,
                                 &mut branch.parser,

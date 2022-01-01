@@ -25,6 +25,16 @@ pub fn parse_directive_ruledef(
 
     state.parser.expect(syntax::TokenKind::BraceOpen)?;
 
+    // Push a placeholder ruleset to allow
+    // recursive references to its name from
+    // the rules within.
+    state.asm_state.rulesets.push(asm::Ruleset
+    {
+        name: name.clone(),
+        rules: Vec::new(),
+        decl_span: decl_span.clone(),
+    });
+
     let mut ruleset = asm::Ruleset
     {
         name: name.clone(),
@@ -40,6 +50,9 @@ pub fn parse_directive_ruledef(
 
     state.parser.expect(syntax::TokenKind::BraceClose)?;
 
+    // Remove the placeholder ruleset and
+    // add the real one, which was populated with rules.
+    state.asm_state.rulesets.pop();
     state.asm_state.rulesets.push(ruleset);
 
     if is_not_subruledef
