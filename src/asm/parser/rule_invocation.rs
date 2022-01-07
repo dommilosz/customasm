@@ -274,7 +274,8 @@ pub fn match_rule<'a>(
                         println!("- branch {}, try match exact `{}`", branch_index, c);
                     }
                     
-                    if branch.parser.next_partial().to_ascii_lowercase() != *c
+                    if branch.parser.next_partial().to_ascii_lowercase() != *c ||
+                        branch.parser.next_is_whitespace()
                     {
                         branch.dead = true;
                     }
@@ -288,6 +289,14 @@ pub fn match_rule<'a>(
                                 branch_index,
                                 fileserver.get_excerpt(&branch.parser.get_next_spans(100)));
                         }
+                    }
+                }
+
+                asm::PatternPart::Whitespace =>
+                {
+                    if !branch.parser.next_is_whitespace()
+                    {
+                        branch.dead = true;
                     }
                 }
 

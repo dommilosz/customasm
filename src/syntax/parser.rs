@@ -11,6 +11,7 @@ pub struct Parser<'a>
 	index: usize,
 	index_prev: usize,
 	read_linebreak: bool,
+	read_whitespace: bool,
 	partial_index: usize
 }
 
@@ -20,6 +21,7 @@ pub struct ParserState
 	index: usize,
 	index_prev: usize,
 	read_linebreak: bool,
+	read_whitespace: bool,
 	partial_index: usize
 }
 
@@ -37,6 +39,7 @@ impl<'a> Parser<'a>
 			index: 0,
 			index_prev: 0,
 			read_linebreak: false,
+			read_whitespace: false,
 			partial_index: 0
 		};
 		
@@ -307,6 +310,7 @@ impl<'a> Parser<'a>
 			index: self.index,
 			index_prev: self.index_prev,
 			read_linebreak: self.read_linebreak,
+			read_whitespace: self.read_whitespace,
 			partial_index: self.partial_index
 		}
 	}
@@ -317,6 +321,7 @@ impl<'a> Parser<'a>
 		self.index = state.index;
 		self.index_prev = state.index_prev;
 		self.read_linebreak = state.read_linebreak;
+		self.read_whitespace = state.read_whitespace;
 		self.partial_index = state.partial_index;
 	}
 	
@@ -335,6 +340,9 @@ impl<'a> Parser<'a>
 			if self.tokens[self.index].kind == TokenKind::LineBreak
 				{ self.read_linebreak = true; }
 			
+			if self.tokens[self.index].kind == TokenKind::Whitespace
+				{ self.read_whitespace = true; }
+
 			/*if self.tokens[self.index].kind == TokenKind::Comment &&
 				self.tokens[self.index].excerpt.as_ref().unwrap().chars().any(|c| c == '\n')
 				{ self.read_linebreak = true; }*/
@@ -357,6 +365,7 @@ impl<'a> Parser<'a>
 			{ self.index += 1; }
 		
 		self.read_linebreak = false;
+		self.read_whitespace = false;
 		self.skip_ignorable();
 		token
 	}
@@ -421,6 +430,12 @@ impl<'a> Parser<'a>
 	pub fn clear_linebreak(&mut self)
 	{
 		self.read_linebreak = false;
+	}
+	
+	
+	pub fn clear_whitespace(&mut self)
+	{
+		self.read_whitespace = false;
 	}
 
 
@@ -541,6 +556,39 @@ impl<'a> Parser<'a>
 			if let Some(ref report) = self.report
 			{
 				report.error_span("expected line break", &self.tokens[self.index_prev].span.after());
+			}
+			Err(())
+		}
+	}
+	
+	
+	pub fn next_is_whitespace(&self) -> bool
+	{
+		self.read_whitespace || self.is_over()
+	}
+	
+	
+	pub fn maybe_expect_whitespace(&mut self) -> Option<()>
+	{
+		if self.next_is_whitespace()
+		{
+			self.read_whitespace = false;
+			Some(())
+		}
+		else
+			{ None }
+	}
+	
+	
+	pub fn expect_whitespace(&mut self) -> Result<(), ()>
+	{
+		if self.maybe_expect_whitespace().is_some()
+			{ Ok(()) }
+		else
+		{
+			if let Some(ref report) = self.report
+			{
+				report.error_span("expected whitespace", &self.tokens[self.index_prev].span.after());
 			}
 			Err(())
 		}
