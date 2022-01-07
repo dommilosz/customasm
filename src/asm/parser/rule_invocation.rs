@@ -267,21 +267,20 @@ pub fn match_rule<'a>(
         {
             match part
             {
-                asm::PatternPart::Exact(c) =>
+                asm::PatternPart::Exact(s) =>
                 {
                     if DEBUG
                     {
-                        println!("- branch {}, try match exact `{}`", branch_index, c);
+                        println!("- branch {}, try match exact `{}`", branch_index, s);
                     }
                     
-                    if branch.parser.next_partial().to_ascii_lowercase() != *c ||
-                        branch.parser.next_is_whitespace()
+                    if branch.parser.next().text().to_ascii_lowercase() != *s
                     {
                         branch.dead = true;
                     }
                     else
                     {
-                        branch.parser.advance_partial();
+                        branch.parser.advance();
 
                         if DEBUG
                         {
@@ -289,14 +288,6 @@ pub fn match_rule<'a>(
                                 branch_index,
                                 fileserver.get_excerpt(&branch.parser.get_next_spans(100)));
                         }
-                    }
-                }
-
-                asm::PatternPart::Whitespace =>
-                {
-                    if !branch.parser.next_is_whitespace()
-                    {
-                        branch.dead = true;
                     }
                 }
 
@@ -339,9 +330,9 @@ pub fn match_rule<'a>(
 
                                 let next_part = rule.pattern.get(index + 1);
 
-                                if let Some(asm::PatternPart::Exact(next_part_char)) = next_part
+                                if let Some(asm::PatternPart::Exact(next_part_str)) = next_part
                                 {
-                                    if let Some(slice_parser) = branch.parser.slice_until_char_or_nesting(*next_part_char)
+                                    if let Some(slice_parser) = branch.parser.slice_until_char_or_nesting(next_part_str.chars().next().unwrap())
                                     {
                                         expr_parser = slice_parser;
                                         expr_using_slice = true;

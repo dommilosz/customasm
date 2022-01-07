@@ -14,8 +14,7 @@ pub struct Rule
 #[derive(Debug)]
 pub enum PatternPart
 {
-    Exact(char),
-    Whitespace,
+    Exact(String),
     Parameter(usize),
 }
 
@@ -55,17 +54,7 @@ impl Rule
 	
 	pub fn pattern_add_exact(&mut self, token: &syntax::Token)
 	{
-		for c in token.text().chars()
-		{
-			let part = PatternPart::Exact(c.to_ascii_lowercase());
-			self.pattern.push(part);
-		}
-	}
-	
-	
-	pub fn pattern_add_whitespace(&mut self)
-	{
-        self.pattern.push(PatternPart::Whitespace);
+        self.pattern.push(PatternPart::Exact(token.text().to_owned()));
 	}
 	
 	
