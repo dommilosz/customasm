@@ -1397,6 +1397,16 @@ impl State
 				else
 				{
 					subs_tokens.push(subs_parser.advance());
+					
+					if subs_parser.next_is_whitespace()
+					{
+						subs_tokens.push(syntax::Token
+						{
+							kind: syntax::TokenKind::Whitespace,
+							span: diagn::Span::new_dummy(),
+							excerpt: None,
+						});
+					}
 				}
 			}
 

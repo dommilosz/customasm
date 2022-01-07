@@ -15,6 +15,7 @@ pub struct Rule
 pub enum PatternPart
 {
     Exact(char),
+    Whitespace,
     Parameter(usize),
 }
 
@@ -59,6 +60,12 @@ impl Rule
 			let part = PatternPart::Exact(c.to_ascii_lowercase());
 			self.pattern.push(part);
 		}
+	}
+	
+	
+	pub fn pattern_add_whitespace(&mut self)
+	{
+        self.pattern.push(PatternPart::Whitespace);
 	}
 	
 	

@@ -1,0 +1,8 @@
+#ruledef
+{
+	rl a => 0x0000
+	rla => 0x01
+}
+
+rl a ; = 0x0000
+rla ; = 0x01
