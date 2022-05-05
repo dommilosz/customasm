@@ -1,11 +1,8 @@
 use crate::*;
 use num_bigint::ToBigInt;
-use crate::util::{BigInt, FileServer};
+use crate::util::{BigInt};
 use crate::syntax::TokenKind;
-use crate::diagn::Span;
 use crate::expr::Value;
-use std::io::Read;
-use std::ops::Add;
 use std::collections::HashMap;
 
 
@@ -1046,15 +1043,12 @@ impl State
 				"utf16le" |
 				"utf32be" |
 				"utf32le" |
+				"len"|
+				"repeat"|
 				"ascii" =>
 				{
 					return Ok(expr::Value::BuiltInFunction(info.hierarchy[0].clone()));
 				}
-
-				"len" =>
-					{
-						return Ok(expr::Value::BuiltInFunction(info.hierarchy[0].clone()));
-					}
 
 				_ => {}
 			}
@@ -1342,6 +1336,19 @@ impl State
 							bigint2.fix_size();
 							bigint2.align_size(ctx.cur_wordsize);
 							Ok(expr::Value::make_integer(bigint2))
+						}
+						
+					"repeat" =>
+						{
+							State::eval_fn_check_arg_number(info, 2)?;
+							let in_bigint = State::eval_fn_get_sized_bigint_arg(info,0)?;
+							let bigint = State::eval_fn_get_sized_bigint_arg(info, 1)?;
+
+							let in_str = in_bigint.to_hex_str_no0x();
+
+							let number = bigint.to_u32();
+							let out_str = in_str.repeat(number.try_into().unwrap());
+							Ok(expr::Value::make_integer(BigInt::from_hex(&out_str)))
 						}
 
 					"utf8" |

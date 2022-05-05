@@ -1,5 +1,5 @@
 use num_bigint;
-
+use crate::num_traits::Num;
 
 #[derive(Clone, Debug, Eq)]
 pub struct BigInt
@@ -31,6 +31,10 @@ impl BigInt
         format!("{:#X}", self.bigint)
     }
 
+    pub fn to_hex_str_no0x(&self) -> String{
+        format!("{:X}", self.bigint)
+    }
+
     pub fn from_bytes_be(bytes: &[u8]) -> BigInt
     {
         let bigint = num_bigint::BigInt::from_signed_bytes_be(&bytes);
@@ -38,6 +42,16 @@ impl BigInt
         {
             bigint,
             size: Some(bytes.len() * 8),
+        }
+    }
+
+    pub fn from_hex(hex: &String) -> BigInt
+    {
+        let bigint = num_bigint::BigInt::from_str_radix(hex,16);
+        BigInt
+        {
+            bigint: bigint.unwrap(),
+            size: Some(hex.len() * 4),
         }
     }
 
@@ -277,6 +291,19 @@ impl BigInt
     pub fn set_size(&mut self,size:usize) {
         self.size = Option::from(size);
     }
+	
+	pub fn to_u32(&self) -> u32{
+		let vec = self.bigint.to_bytes_le().1;
+		let mut index = 0;
+		let mut number:u32 = 0;
+		for byte in vec {
+			let _byte:u32 = byte.into();
+			let nval:u32 = _byte << (8*index);
+			number |= nval;
+			index = index+1;
+		}
+		number
+	}
 }
 
 
