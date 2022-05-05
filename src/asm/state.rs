@@ -1053,7 +1053,7 @@ impl State
 
 				"len" =>
 					{
-						return Ok(expr::Value::Function(info.hierarchy[0].clone()));
+						return Ok(expr::Value::BuiltInFunction(info.hierarchy[0].clone()));
 					}
 
 				_ => {}
@@ -1467,6 +1467,9 @@ impl State
 					subs_tokens[i].set_content(address.to_hex_str());
 				}
 			}
+			
+			let mut subparser = syntax::Parser::new(Some(info.report.clone()), &subs_tokens);
+			subparser.suppress_reports();
 
 			//println!("> after subs `{:?}`", subs_tokens);
 		
